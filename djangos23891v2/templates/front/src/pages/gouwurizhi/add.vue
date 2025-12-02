@@ -1,0 +1,556 @@
+<template>
+	<div class="add-update-preview">
+		<el-form
+			class="add-update-form"
+			ref="ruleForm"
+			:model="ruleForm"
+			:rules="rules"
+			label-width="180px"
+			>
+			<el-form-item class="add-item" label="购买者ID" prop="uid">
+				<el-input v-model.number="ruleForm.uid" 
+					placeholder="购买者ID" clearable :disabled=" false  ||ro.uid"></el-input>
+			</el-form-item>
+			<el-form-item class="add-item" label="商品ID" prop="goodsid">
+				<el-input v-model.number="ruleForm.goodsid" 
+					placeholder="商品ID" clearable :disabled=" false  ||ro.goodsid"></el-input>
+			</el-form-item>
+			<el-form-item class="add-item" label="商品类目ID" prop="goodstypeid">
+				<el-input v-model.number="ruleForm.goodstypeid" 
+					placeholder="商品类目ID" clearable :disabled=" false  ||ro.goodstypeid"></el-input>
+			</el-form-item>
+			<el-form-item class="add-item" label="行为类型" prop="userbehavior">
+				<el-input v-model="ruleForm.userbehavior" 
+					placeholder="行为类型" clearable :disabled=" false  ||ro.userbehavior"></el-input>
+			</el-form-item>
+			<el-form-item class="add-item" label="时间戳" prop="shijianchuo">
+				<el-input v-model.number="ruleForm.shijianchuo" 
+					placeholder="时间戳" clearable :disabled=" false  ||ro.shijianchuo"></el-input>
+			</el-form-item>
+
+			<el-form-item class="add-btn-item">
+				<el-button class="submitBtn"  type="primary" @click="onSubmit">
+					<span class="icon iconfont icon-kaitongfuwu"></span>
+					<span class="text">更新信息</span>
+				</el-button>
+				<el-button class="closeBtn" @click="back()">
+					<span class="icon iconfont icon-shanchu1"></span>
+					<span class="text">退出登录</span>
+				</el-button>
+			</el-form-item>
+		</el-form>
+	</div>
+</template>
+
+<script>
+	export default {
+		data() {
+			return {
+				id: '',
+				baseUrl: '',
+				ro:{
+					uid : false,
+					goodsid : false,
+					goodstypeid : false,
+					userbehavior : false,
+					shijianchuo : false,
+				},
+				type: '',
+				userTableName: localStorage.getItem('UserTableName'),
+				ruleForm: {
+					uid: '',
+					goodsid: '',
+					goodstypeid: '',
+					userbehavior: '',
+					shijianchuo: '',
+				},
+
+
+				rules: {
+					uid: [
+						{ validator: this.$validate.isIntNumer, trigger: 'blur' },
+					],
+					goodsid: [
+						{ validator: this.$validate.isIntNumer, trigger: 'blur' },
+					],
+					goodstypeid: [
+						{ validator: this.$validate.isIntNumer, trigger: 'blur' },
+					],
+					userbehavior: [
+					],
+					shijianchuo: [
+						{ validator: this.$validate.isIntNumer, trigger: 'blur' },
+					],
+				},
+				centerType: false,
+			};
+		},
+		computed: {
+
+
+
+		},
+		components: {
+		},
+		created() {
+			if(this.$route.query.centerType){
+				this.centerType = true
+			}
+			//this.bg();
+			let type = this.$route.query.type ? this.$route.query.type : '';
+			this.init(type);
+			this.baseUrl = this.$config.baseUrl;
+		},
+		methods: {
+			getMakeZero(s) {
+				return s < 10 ? '0' + s : s;
+			},
+			// 下载
+			download(file){
+				window.open(`${file}`)
+			},
+			// 初始化
+			init(type) {
+				this.type = type;
+				if(type=='cross'){
+					var obj = JSON.parse(localStorage.getItem('crossObj'));
+					for (var o in obj){
+						if(o=='uid'){
+							this.ruleForm.uid = obj[o];
+							this.ro.uid = true;
+							continue;
+						}
+						if(o=='goodsid'){
+							this.ruleForm.goodsid = obj[o];
+							this.ro.goodsid = true;
+							continue;
+						}
+						if(o=='goodstypeid'){
+							this.ruleForm.goodstypeid = obj[o];
+							this.ro.goodstypeid = true;
+							continue;
+						}
+						if(o=='userbehavior'){
+							this.ruleForm.userbehavior = obj[o];
+							this.ro.userbehavior = true;
+							continue;
+						}
+						if(o=='shijianchuo'){
+							this.ruleForm.shijianchuo = obj[o];
+							this.ro.shijianchuo = true;
+							continue;
+						}
+					}
+				}else if(type=='edit'){
+					this.info()
+				}
+
+				if (localStorage.getItem('raffleType') && localStorage.getItem('raffleType') != null) {
+					localStorage.removeItem('raffleType')
+					setTimeout(() => {
+						this.onSubmit()
+					}, 300)
+				}
+			},
+
+			// 多级联动参数
+			// 多级联动参数
+			info() {
+				this.$http.get(`gouwurizhi/detail/${this.$route.query.id}`, {emulateJSON: true}).then(res => {
+					if (res.data.code == 0) {
+						this.ruleForm = res.data.data;
+					}
+				});
+			},
+			// 提交
+			async onSubmit() {
+				await this.$refs["ruleForm"].validate(async valid => {
+					if(valid) {
+						if(this.type=='cross'){
+							var statusColumnName = localStorage.getItem('statusColumnName');
+							var statusColumnValue = localStorage.getItem('statusColumnValue');
+							if(statusColumnName && statusColumnName!='') {
+								var obj = JSON.parse(localStorage.getItem('crossObj'));
+								if(!statusColumnName.startsWith("[")) {
+									for (var o in obj){
+										if(o==statusColumnName){
+											obj[o] = statusColumnValue;
+										}
+									}
+									var table = localStorage.getItem('crossTable');
+									await this.$http.post(table+'/update', obj).then(res => {});
+								}
+							}
+						}
+
+
+						await this.$http.post(`gouwurizhi/${this.ruleForm.id?'update':this.centerType?'save':'add'}`, this.ruleForm).then(async res => {
+							if (res.data.code == 0) {
+								this.$message({
+									message: '操作成功',
+									type: 'success',
+									duration: 1500,
+									onClose: () => {
+										this.$router.go(-1);
+									}
+								});
+							} else {
+								this.$message({
+									message: res.data.msg,
+									type: 'error',
+									duration: 1500
+								});
+							}
+						});
+					}
+				});
+			},
+			// 获取uuid
+			getUUID () {
+				return new Date().getTime();
+			},
+			// 返回
+			back() {
+				this.$router.go(-1);
+			},
+		}
+	};
+</script>
+
+<style rel="stylesheet/scss" lang="scss" scoped>
+	.add-update-preview {
+		padding: 0 0 20px;
+		margin: 0px auto;
+		color: #666;
+		background: #fff;
+		width: 1200px;
+		font-size: 16px;
+		position: relative;
+		.add-update-form {
+			margin: 20px 0 0;
+			width: 100%;
+			position: relative;
+			.add-item.el-form-item {
+				padding: 0 0 10px;
+				margin: 0 0 10px;
+				background: none;
+				border-color: #ccc;
+				border-width: 0 0 1px;
+				border-style: dashed;
+				/deep/ .el-form-item__label {
+					padding: 0 10px 0 0;
+					color: #666;
+					font-weight: 500;
+					width: 180px;
+					font-size: inherit;
+					line-height: 40px;
+					text-align: right;
+				}
+				/deep/ .el-form-item__content {
+					margin-left: 180px;
+				}
+				.el-input {
+					width: auto;
+				}
+				.el-input /deep/ .el-input__inner {
+					border: 1px solid #ddd;
+					border-radius: 0px;
+					padding: 0 12px;
+					box-shadow: none;
+					color: inherit;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-input /deep/ .el-input__inner[readonly="readonly"] {
+					border: 0;
+					cursor: not-allowed;
+					border-radius: 0px;
+					padding: 0 12px;
+					box-shadow: none;
+					color: rgba(85, 85, 127, 1.0);
+					background: none;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-input-number /deep/ .el-input__inner {
+					text-align: left;
+					border: 1px solid #ddd;
+					border-radius: 0px;
+					padding: 0 12px;
+					box-shadow: none;
+					color: inherit;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-input-number /deep/ .is-disabled .el-input__inner {
+					text-align: left;
+					border: 0;
+					cursor: not-allowed;
+					border-radius: 0px;
+					padding: 0 12px;
+					box-shadow: none;
+					color: rgba(85, 85, 127, 1.0);
+					background: none;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-input-number /deep/ .el-input-number__decrease {
+					display: none;
+				}
+				.el-input-number /deep/ .el-input-number__increase {
+					display: none;
+				}
+				.el-select {
+					width: auto;
+				}
+				.el-select /deep/ .el-input__inner {
+					border: 1px solid #ddd;
+					border-radius: 0px;
+					padding: 0 10px;
+					color: inherit;
+					width: 100%;
+					font-size: 16px;
+					min-width: inherit !important;
+					height: 40px;
+				}
+				.el-select /deep/ .is-disabled .el-input__inner {
+					border: 0;
+					cursor: not-allowed;
+					border-radius: 0px;
+					padding: 0 10px;
+					box-shadow: none;
+					color: inherit;
+					background: none;
+					width: 100%;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-date-editor {
+					width: auto;
+				}
+				.el-date-editor /deep/ .el-input__inner {
+					border: 1px solid #ddd;
+					border-radius: 0px;
+					padding: 0 10px 0 30px;
+					box-shadow: none;
+					color: inherit;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				.el-date-editor /deep/ .el-input__inner[readonly="readonly"] {
+					border: 0;
+					cursor: not-allowed;
+					border-radius: 0px;
+					padding: 0 10px 0 30px;
+					box-shadow: none;
+					color: inherit;
+					background: none;
+					width: auto;
+					font-size: 16px;
+					height: 40px;
+				}
+				/deep/ .el-upload--picture-card {
+					background: transparent;
+					border: 0;
+					border-radius: 0;
+					width: auto;
+					height: auto;
+					line-height: initial;
+					vertical-align: middle;
+				}
+				/deep/ .upload .upload-img {
+					border: 1px solid #ddd;
+					cursor: pointer;
+					border-radius: 0px;
+					color: #999;
+					background: #fff;
+					width: 80px;
+					font-size: 26px;
+					line-height: 60px;
+					text-align: center;
+					height: 60px;
+				}
+				/deep/ .el-upload-list .el-upload-list__item {
+					border: 1px solid #ddd;
+					cursor: pointer;
+					border-radius: 0px;
+					color: #999;
+					background: #fff;
+					width: 80px;
+					font-size: 26px;
+					line-height: 60px;
+					text-align: center;
+					height: 60px;
+					font-size: 14px;
+					line-height: 1.8;
+				}
+				/deep/ .el-upload .el-icon-plus {
+					border: 1px solid #ddd;
+					cursor: pointer;
+					border-radius: 0px;
+					color: #999;
+					background: #fff;
+					width: 80px;
+					font-size: 26px;
+					line-height: 60px;
+					text-align: center;
+					height: 60px;
+				}
+				/deep/ .el-upload__tip {
+					color: #888;
+					font-size: 16px;
+				}
+				.el-textarea /deep/ .el-textarea__inner {
+					border: 1px solid #ddd;
+					border-radius: 0px;
+					padding: 12px;
+					box-shadow: none;
+					color: inherit;
+					width: auto;
+					font-size: 16px;
+					min-height: 150px;
+					min-width: 48%;
+					height: auto;
+				}
+				.el-textarea /deep/ .el-textarea__inner[readonly="readonly"] {
+					border: 0px solid #ddd;
+					cursor: not-allowed;
+					border-radius: 0px;
+					padding: 12px;
+					box-shadow: none;
+					color: inherit;
+					background: none;
+					width: auto;
+					font-size: 16px;
+					min-height: 150px;
+					min-width: 50%;
+					height: auto;
+				}
+				/deep/ .el-input__inner::placeholder {
+					color: inherit;
+					font-size: inherit;
+				}
+				/deep/ textarea::placeholder {
+					color: inherit;
+					font-size: inherit;
+				}
+				.editor {
+					background-color: #fff;
+					border-radius: 0;
+					padding: 0;
+					box-shadow: none;
+					margin: 0;
+					width: 100%;
+					min-height: 350px;
+					border-color: #ccc;
+					border-width: 1px;
+					border-style: solid;
+					height: auto;
+				}
+				.upload-img {
+					object-fit: cover;
+					width: 100px;
+					height: 100px;
+				}
+				.viewBtn {
+					border: 0;
+					cursor: pointer;
+					border-radius: 0px;
+					padding: 0 20px;
+					margin: 0;
+					color: #333;
+					background: #03abe930;
+					display: inline-block;
+					width: auto;
+					font-size: 14px;
+					line-height: 34px;
+					height: 34px;
+				}
+				.viewBtn:hover {
+				}
+				.unviewBtn {
+					border: 0;
+					cursor: pointer;
+					padding: 0 20px;
+					margin: 0;
+					color: #333;
+					display: inline-block;
+					font-size: 14px;
+					line-height: 34px;
+					border-radius: 0px;
+					outline: none;
+					background: #ddd;
+					width: auto;
+					height: 34px;
+				}
+				.unviewBtn:hover {
+					background: #eee;
+				}
+			}
+			.add-btn-item {
+				padding: 0;
+				margin: 20px 0;
+				.submitBtn {
+					border: 0;
+					cursor: pointer;
+					border-radius: 2px;
+					padding: 0 15px;
+					margin: 0 20px 0 0;
+					background: #03abe9;
+					display: inline-block;
+					width: auto;
+					font-size: 16px;
+					line-height: 40px;
+					height: 40px;
+					.icon {
+						color: #fff;
+					}
+					.text {
+						color: #fff;
+					}
+				}
+				.submitBtn:hover {
+					opacity: 0.8;
+					.icon {
+					}
+					.text {
+					}
+				}
+				.closeBtn {
+					border: 0px solid #ddd;
+					cursor: pointer;
+					border-radius: 2px;
+					padding: 0 15px;
+					margin: 0 20px 0 0;
+					background: #03cce9;
+					display: inline-block;
+					width: auto;
+					font-size: 16px;
+					line-height: 40px;
+					height: 40px;
+					.icon {
+						color: #fff;
+					}
+					.text {
+						color: #fff;
+					}
+				}
+				.closeBtn:hover {
+					opacity: 0.8;
+					.icon {
+					}
+					.text {
+					}
+				}
+			}
+		}
+	}
+	.el-date-editor.el-input {
+		width: auto;
+	}
+</style>
